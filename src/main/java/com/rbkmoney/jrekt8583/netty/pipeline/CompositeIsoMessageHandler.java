@@ -1,16 +1,21 @@
 package com.rbkmoney.jrekt8583.netty.pipeline;
 
 import com.rbkmoney.jrekt8583.IsoMessageListener;
+import com.rbkmoney.jrekt8583.util.IsoUtil;
 import com.solab.iso8583.IsoMessage;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.util.concurrent.Promise;
 import org.slf4j.Logger;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import static com.rbkmoney.jrekt8583.IsoField.SYSTEM_TRACE_AUDIT_NUMBER;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
@@ -22,6 +27,8 @@ public class CompositeIsoMessageHandler<T extends IsoMessage> extends ChannelInb
     private final Logger logger = getLogger(CompositeIsoMessageHandler.class);
 
     private final List<IsoMessageListener<T>> messageListeners = new CopyOnWriteArrayList<>();
+    private final ConcurrentMap<String, Promise<T>> promiseMap = new ConcurrentHashMap<>();
+
     private final boolean failOnError;
 
     public CompositeIsoMessageHandler(boolean failOnError) {
@@ -48,6 +55,12 @@ public class CompositeIsoMessageHandler<T extends IsoMessage> extends ChannelInb
         } catch (ClassCastException e) {
             logger.debug("IsoMessage subclass {} is not supported by {}. Doing nothing.", msg.getClass(), getClass());
             return;
+        }
+        if (isoMessage.hasField(SYSTEM_TRACE_AUDIT_NUMBER.getId())) {
+            Promise<T> promise = promiseMap.remove(IsoUtil.getStringFieldValue(isoMessage, SYSTEM_TRACE_AUDIT_NUMBER));
+            if (promise != null) {
+                promise.setSuccess(isoMessage);
+            }
         }
 
         boolean applyNextListener = true;
@@ -89,5 +102,9 @@ public class CompositeIsoMessageHandler<T extends IsoMessage> extends ChannelInb
 
     public void removeListener(IsoMessageListener<T> listener) {
         messageListeners.remove(listener);
+    }
+
+    public ConcurrentMap<String, Promise<T>> getPromiseMap() {
+        return promiseMap;
     }
 }

@@ -21,6 +21,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -124,7 +125,7 @@ public class LockDetectionIT {
             }).start();
         }
 
-        latch.await();
+        latch.await(20, TimeUnit.SECONDS);
         monitoringThread.join();
 
         assertThat(monitorDeadlockedCount.get()).as("Monitor Deadlock Count").isEqualTo(0);

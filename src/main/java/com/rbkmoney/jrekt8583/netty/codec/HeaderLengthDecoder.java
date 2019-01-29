@@ -8,6 +8,8 @@ import io.netty.handler.codec.CorruptedFrameException;
 
 import java.util.List;
 
+import static io.netty.util.internal.MathUtil.isOutOfBounds;
+
 public class HeaderLengthDecoder extends ByteToMessageDecoder {
 
     private final int lengthHeaderLength;
@@ -30,6 +32,11 @@ public class HeaderLengthDecoder extends ByteToMessageDecoder {
         }
 
         int actualLengthHeaderOffset = in.readerIndex();
+        //can read header length? if not, return nothing
+        int capacity = in.capacity();
+        if (isOutOfBounds(actualLengthHeaderOffset, lengthHeaderLength, capacity)) {
+            return null;
+        }
         int frameLength = getUnadjustedFrameLength(in, actualLengthHeaderOffset, lengthHeaderLength);
 
         if (frameLength < 0) {
