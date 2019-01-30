@@ -23,6 +23,7 @@ import static com.rbkmoney.jrekt8583.IsoField.SYSTEM_TRACE_AUDIT_NUMBER;
 
 public class Iso8583Client<T extends IsoMessage> extends AbstractIso8583Connector<ClientConfiguration, Bootstrap, T> {
 
+    public static final long DEFAULT_TIMEOUT = 60L;
     private ReconnectOnCloseListener reconnectOnCloseListener;
 
     public Iso8583Client(SocketAddress socketAddress, ClientConfiguration config, MessageFactory<T> isoMessageFactory) {
@@ -155,18 +156,24 @@ public class Iso8583Client<T extends IsoMessage> extends AbstractIso8583Connecto
         Promise<T> promise = channel.eventLoop().newPromise();
         if (message.hasField(SYSTEM_TRACE_AUDIT_NUMBER.getId())) {
             String traceId = IsoUtil.getStringFieldValue(message, SYSTEM_TRACE_AUDIT_NUMBER);
-            getMessageHandler().getPromiseMap().putIfAbsent(traceId, promise);
+            getMessageHandler().putIfAbsentPromise(traceId, promise);
         }
         channel.writeAndFlush(message);
         return promise;
     }
 
-    public T send(T message) throws InterruptedException, ExecutionException {
-        return sendAsync(message).get();
+    public T send(T message) throws InterruptedException, ExecutionException, TimeoutException {
+        return send(message, DEFAULT_TIMEOUT, TimeUnit.SECONDS);
     }
 
-    public T send(T message, long timeout, TimeUnit timeUnit) throws InterruptedException, TimeoutException, ExecutionException {
-        return sendAsync(message).get(timeout, timeUnit);
+    public T send(T message, long timeout, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
+        try {
+            return sendAsync(message).get(timeout, timeUnit);
+        } catch (TimeoutException e) {
+            logger.error("TimeoutException when send message: {} e: ", message, e);
+            getMessageHandler().removePromise(IsoUtil.getStringFieldValue(message, SYSTEM_TRACE_AUDIT_NUMBER));
+            throw e;
+        }
     }
 
     public boolean isConnected() {

@@ -104,7 +104,11 @@ public class CompositeIsoMessageHandler<T extends IsoMessage> extends ChannelInb
         messageListeners.remove(listener);
     }
 
-    public ConcurrentMap<String, Promise<T>> getPromiseMap() {
-        return promiseMap;
+    public void putIfAbsentPromise(String key, Promise<T> promise) {
+        promiseMap.putIfAbsent(key, promise);
+    }
+
+    public void removePromise(String key) {
+        promiseMap.remove(key);
     }
 }

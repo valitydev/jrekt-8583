@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 
 import java.util.AbstractMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -61,7 +62,7 @@ public class ClientSendAsyncIT extends AbstractIT {
     }
 
     @Test
-    public void testSendWhenStanHasALeadZeros() throws ExecutionException, InterruptedException {
+    public void testSendWhenStanHasALeadZeros() throws ExecutionException, InterruptedException, TimeoutException {
         IsoMessage request = client.getIsoMessageFactory().newMessage(0x0200);
         request.setValue(11, 0, IsoType.NUMERIC, 6);
         client.send(request);
