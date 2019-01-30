@@ -12,6 +12,8 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Properties;
 
+import static com.rbkmoney.jrekt8583.IsoField.*;
+
 /**
  * ChannelHandler responsible for logging messages.
  * <p>
@@ -21,10 +23,10 @@ import java.util.Properties;
 public class IsoMessageLoggingHandler extends LoggingHandler {
 
     public static final int[] DEFAULT_MASKED_FIELDS = {
-            34,// PAN extended
-            35,// track 2
-            36,// track 3
-            45// track 1
+            PAN_EXTENDED.getId(),
+            TRACK_2_DATA.getId(),
+            TRACK_3_DATA.getId(),
+            TRACK_1_DATA.getId()
     };
     private static final char MASK_CHAR = '*';
     private static final char[] MASKED_VALUE = "***".toCharArray();
@@ -98,7 +100,7 @@ public class IsoMessageLoggingHandler extends LoggingHandler {
                 if (printSensitiveData) {
                     formattedValue = field.toString().toCharArray();
                 } else {
-                    if (i == 2) {
+                    if (i == PAN.getId()) {
                         formattedValue = maskPAN(field.toString());
                     } else if (Arrays.binarySearch(maskedFields, i) >= 0) {
                         formattedValue = MASKED_VALUE;

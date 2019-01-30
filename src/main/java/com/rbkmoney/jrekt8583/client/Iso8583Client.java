@@ -3,19 +3,27 @@ package com.rbkmoney.jrekt8583.client;
 import com.rbkmoney.jrekt8583.AbstractIso8583Connector;
 import com.rbkmoney.jrekt8583.netty.pipeline.Iso8583ChannelInitializer;
 import com.rbkmoney.jrekt8583.netty.pipeline.ReconnectOnCloseListener;
+import com.rbkmoney.jrekt8583.util.IsoUtil;
 import com.solab.iso8583.IsoMessage;
 import com.solab.iso8583.MessageFactory;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.util.concurrent.Promise;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+import static com.rbkmoney.jrekt8583.IsoField.SYSTEM_TRACE_AUDIT_NUMBER;
 
 public class Iso8583Client<T extends IsoMessage> extends AbstractIso8583Connector<ClientConfiguration, Bootstrap, T> {
 
+    public static final long DEFAULT_TIMEOUT = 60L;
     private ReconnectOnCloseListener reconnectOnCloseListener;
 
     public Iso8583Client(SocketAddress socketAddress, ClientConfiguration config, MessageFactory<T> isoMessageFactory) {
@@ -137,13 +145,7 @@ public class Iso8583Client<T extends IsoMessage> extends AbstractIso8583Connecto
         }
     }
 
-    /**
-     * Sends asynchronously and returns a {@link ChannelFuture}
-     *
-     * @param isoMessage A message to send
-     * @return ChannelFuture which will be notified when message is sent
-     */
-    public ChannelFuture sendAsync(IsoMessage isoMessage) {
+    public Future<T> sendAsync(T message) {
         Channel channel = getChannel();
         if (channel == null) {
             throw new IllegalStateException("Channel is not opened");
@@ -151,15 +153,27 @@ public class Iso8583Client<T extends IsoMessage> extends AbstractIso8583Connecto
         if (!channel.isWritable()) {
             throw new IllegalStateException("Channel is not writable");
         }
-        return channel.writeAndFlush(isoMessage);
+        Promise<T> promise = channel.eventLoop().newPromise();
+        if (message.hasField(SYSTEM_TRACE_AUDIT_NUMBER.getId())) {
+            String traceId = IsoUtil.getStringFieldValue(message, SYSTEM_TRACE_AUDIT_NUMBER);
+            getMessageHandler().putIfAbsentPromise(traceId, promise);
+        }
+        channel.writeAndFlush(message);
+        return promise;
     }
 
-    public void send(IsoMessage isoMessage) throws InterruptedException {
-        sendAsync(isoMessage).sync().await();
+    public T send(T message) throws InterruptedException, ExecutionException, TimeoutException {
+        return send(message, DEFAULT_TIMEOUT, TimeUnit.SECONDS);
     }
 
-    public void send(IsoMessage isoMessage, long timeout, TimeUnit timeUnit) throws InterruptedException {
-        sendAsync(isoMessage).sync().await(timeout, timeUnit);
+    public T send(T message, long timeout, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
+        try {
+            return sendAsync(message).get(timeout, timeUnit);
+        } catch (TimeoutException e) {
+            logger.error("TimeoutException when send message: {} e: ", message, e);
+            getMessageHandler().removePromise(IsoUtil.getStringFieldValue(message, SYSTEM_TRACE_AUDIT_NUMBER));
+            throw e;
+        }
     }
 
     public boolean isConnected() {
