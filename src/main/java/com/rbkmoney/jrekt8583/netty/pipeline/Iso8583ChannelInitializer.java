@@ -21,6 +21,7 @@ import com.rbkmoney.jrekt8583.ConnectorConfigurer;
 import com.rbkmoney.jrekt8583.netty.codec.HeaderLengthDecoder;
 import com.rbkmoney.jrekt8583.netty.codec.Iso8583Decoder;
 import com.rbkmoney.jrekt8583.netty.codec.Iso8583Encoder;
+import com.solab.iso8583.IsoMessage;
 import com.solab.iso8583.MessageFactory;
 import io.netty.bootstrap.AbstractBootstrap;
 import io.netty.channel.*;
@@ -41,6 +42,7 @@ public class Iso8583ChannelInitializer<
     private final Iso8583Encoder isoMessageEncoder;
     private final ChannelHandler loggingHandler;
     private final ChannelHandler parseExceptionHandler;
+    private final AbstractIdleEventHandler idleEventHandler;
 
     public Iso8583ChannelInitializer(
             C configuration,
@@ -57,6 +59,7 @@ public class Iso8583ChannelInitializer<
         this.isoMessageEncoder = createIso8583Encoder(configuration);
         this.loggingHandler = createLoggingHandler(configuration);
         this.parseExceptionHandler = createParseExceptionHandler();
+        this.idleEventHandler = createIdleEventHandler(configuration);
     }
 
     @Override
@@ -79,7 +82,7 @@ public class Iso8583ChannelInitializer<
         }
 
         pipeline.addLast("idleState", new IdleStateHandler(0, 0, configuration.getIdleTimeout()));
-        pipeline.addLast("idleEventHandler", new IdleEventHandler(isoMessageFactory));
+        pipeline.addLast("idleEventHandler", idleEventHandler);
         if (customChannelHandlers != null) {
             pipeline.addLast(workerGroup, customChannelHandlers);
         }
@@ -112,5 +115,17 @@ public class Iso8583ChannelInitializer<
                 configuration.getSensitiveDataFields());
     }
 
+
+    private AbstractIdleEventHandler createIdleEventHandler(C configuration) {
+        if (configuration.getIdleEventHandler() != null) {
+            return configuration.getIdleEventHandler();
+        }
+        return new AbstractIdleEventHandler() {
+            @Override
+            protected IsoMessage createEchoMessage() {
+                return isoMessageFactory.newMessage(0x800);
+            }
+        };
+    }
 
 }
