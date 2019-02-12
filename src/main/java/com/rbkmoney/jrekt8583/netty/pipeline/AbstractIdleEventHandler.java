@@ -7,13 +7,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 
-public class IdleEventHandler extends ChannelInboundHandlerAdapter {
-
-    private final MessageFactory isoMessageFactory;
-
-    public IdleEventHandler(MessageFactory isoMessageFactory) {
-        this.isoMessageFactory = isoMessageFactory;
-    }
+public abstract class AbstractIdleEventHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
@@ -27,7 +21,5 @@ public class IdleEventHandler extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private IsoMessage createEchoMessage() {
-        return isoMessageFactory.newMessage(0x800);
-    }
+    protected abstract IsoMessage createEchoMessage();
 }
