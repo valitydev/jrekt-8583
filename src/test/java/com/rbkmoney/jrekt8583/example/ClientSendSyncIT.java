@@ -18,9 +18,9 @@ import java.util.stream.IntStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.slf4j.LoggerFactory.getLogger;
 
-public class ClientSendAsyncIT extends AbstractIT {
+public class ClientSendSyncIT extends AbstractIT {
 
-    private static final Logger log = getLogger(ClientSendAsyncIT.class);
+    private static final Logger log = getLogger(ClientSendSyncIT.class);
 
     @Override
     protected void configureServer(Iso8583Server<IsoMessage> server) {
@@ -40,14 +40,14 @@ public class ClientSendAsyncIT extends AbstractIT {
     }
 
     @Test
-    public void testSendAsync() {
+    public void testSendSync() {
         IntStream.rangeClosed(1, 10000)
                 .parallel()
                 .mapToObj(
                         value -> {
                             log.info("Running sending task {}", value);
                             IsoMessage request = client.getIsoMessageFactory().newMessage(0x0200);
-                            return new AbstractMap.SimpleEntry<>(request, client.sendAsync(request));
+                            return new AbstractMap.SimpleEntry<>(request, client.sendSynchronously(request));
                         })
                 .forEach(data -> {
                     try {
@@ -65,11 +65,11 @@ public class ClientSendAsyncIT extends AbstractIT {
     public void testSendWhenStanHasALeadZeros() throws ExecutionException, InterruptedException, TimeoutException {
         IsoMessage request = client.getIsoMessageFactory().newMessage(0x0200);
         request.setValue(11, 0, IsoType.NUMERIC, 6);
-        client.send(request);
+        client.sendSync(request);
         request.setValue(11, "000000", IsoType.NUMERIC, 6);
-        client.send(request);
+        client.sendSync(request);
         request.setValue(11, "000001", IsoType.NUMERIC, 6);
-        client.send(request);
+        client.sendSync(request);
     }
 
 }

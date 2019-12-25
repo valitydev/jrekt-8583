@@ -149,14 +149,32 @@ public class Iso8583Client<T extends IsoMessage> extends AbstractIso8583Connecto
         }
     }
 
-    public Future<T> sendAsync(T message) {
+    public ChannelFuture sendAsync(T message) {
         Channel channel = getChannel();
+        checkChannelState(channel);
+        return channel.writeAndFlush(message);
+    }
+
+    private void checkChannelState(Channel channel) {
         if (channel == null) {
             throw new IllegalStateException("Channel is not opened");
         }
         if (!channel.isWritable()) {
             throw new IllegalStateException("Channel is not writable");
         }
+    }
+
+    public void send(T message) throws InterruptedException {
+        sendAsync(message).sync().await();
+    }
+
+    public void send(T message, long timeout, TimeUnit timeUnit) throws InterruptedException {
+        sendAsync(message).sync().await(timeout, timeUnit);
+    }
+
+    public Future<T> sendSynchronously(T message) {
+        Channel channel = getChannel();
+        checkChannelState(channel);
         Promise<T> promise = channel.eventLoop().newPromise();
         if (message.hasField(SYSTEM_TRACE_AUDIT_NUMBER.getId())) {
             String traceId = IsoUtil.getStringFieldValue(message, SYSTEM_TRACE_AUDIT_NUMBER);
@@ -166,13 +184,13 @@ public class Iso8583Client<T extends IsoMessage> extends AbstractIso8583Connecto
         return promise;
     }
 
-    public T send(T message) throws InterruptedException, ExecutionException, TimeoutException {
-        return send(message, DEFAULT_TIMEOUT, TimeUnit.SECONDS);
+    public T sendSync(T message) throws InterruptedException, ExecutionException, TimeoutException {
+        return sendSync(message, DEFAULT_TIMEOUT, TimeUnit.SECONDS);
     }
 
-    public T send(T message, long timeout, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
+    public T sendSync(T message, long timeout, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
         try {
-            return sendAsync(message).get(timeout, timeUnit);
+            return sendSynchronously(message).get(timeout, timeUnit);
         } catch (TimeoutException e) {
             logger.error("TimeoutException when send message: {} e: ", message, e);
             getMessageHandler().removePromise(IsoUtil.getStringFieldValue(message, SYSTEM_TRACE_AUDIT_NUMBER));
