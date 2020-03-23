@@ -2,7 +2,7 @@ package com.rbkmoney.jrekt8583;
 
 import com.rbkmoney.jrekt8583.netty.pipeline.CompositeIsoMessageHandler;
 import com.rbkmoney.jrekt8583.netty.pipeline.EchoMessageListener;
-import com.rbkmoney.jrekt8583.netty.pipeline.AbstractIdleEventHandler;
+import com.rbkmoney.jrekt8583.netty.pipeline.IdleEventHandler;
 import com.rbkmoney.jrekt8583.netty.pipeline.IsoMessageLoggingHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
@@ -33,7 +33,7 @@ public abstract class ConnectorConfiguration {
     private IsoField[] sensitiveDataFields;
     private boolean logFieldDescription;
     private final int frameLengthFieldLength;
-    private AbstractIdleEventHandler idleEventHandler;
+    private IdleEventHandler idleEventHandler;
 
     protected ConnectorConfiguration(final Builder builder) {
         addLoggingHandler = builder.addLoggingHandler;
@@ -139,7 +139,7 @@ public abstract class ConnectorConfiguration {
      * Returns custom IdleEventHandler
      * @return IdleEventHandler
      */
-    public AbstractIdleEventHandler getIdleEventHandler() {
+    public IdleEventHandler getIdleEventHandler() {
         return idleEventHandler;
     }
 
@@ -153,7 +153,7 @@ public abstract class ConnectorConfiguration {
         private int workerThreadsCount = 0; // use netty default
         private IsoField[] sensitiveDataFields;
         private int frameLengthFieldLength = DEFAULT_FRAME_LENGTH_FIELD_LENGTH;
-        private AbstractIdleEventHandler idleEventHandler;
+        private IdleEventHandler idleEventHandler;
 
         public B addEchoMessageListener() {
             this.addEchoMessageListener = true;
@@ -180,7 +180,7 @@ public abstract class ConnectorConfiguration {
             return (B) this;
         }
 
-        public B withIdleEventHandler(AbstractIdleEventHandler idleEventHandler) {
+        public B withIdleEventHandler(IdleEventHandler idleEventHandler) {
             this.idleEventHandler = idleEventHandler;
             return (B) this;
         }
