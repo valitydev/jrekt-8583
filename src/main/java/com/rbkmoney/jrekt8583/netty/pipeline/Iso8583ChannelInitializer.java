@@ -42,7 +42,7 @@ public class Iso8583ChannelInitializer<
     private final Iso8583Encoder isoMessageEncoder;
     private final ChannelHandler loggingHandler;
     private final ChannelHandler parseExceptionHandler;
-    private final AbstractIdleEventHandler idleEventHandler;
+    private final IdleEventHandler idleEventHandler;
 
     public Iso8583ChannelInitializer(
             C configuration,
@@ -116,15 +116,11 @@ public class Iso8583ChannelInitializer<
     }
 
 
-    private AbstractIdleEventHandler createIdleEventHandler(C configuration) {
+    private IdleEventHandler createIdleEventHandler(C configuration) {
         if (configuration.getIdleEventHandler() != null) {
             return configuration.getIdleEventHandler();
         }
-        return new AbstractIdleEventHandler() {
-            @Override
-            protected IsoMessage createEchoMessage() {
-                return isoMessageFactory.newMessage(0x800);
-            }
+        return new IdleEventHandler(() -> isoMessageFactory.newMessage(0x800)) {
         };
     }
 
